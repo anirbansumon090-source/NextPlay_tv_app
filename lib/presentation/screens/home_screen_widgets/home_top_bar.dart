@@ -38,7 +38,7 @@ class HomeTopBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(6),
             ),
             child: const Text(
-              'OTTKING',
+              'Next Play',
               style: TextStyle(
                 color: Colors.black,
                 fontWeight: FontWeight.w900,
