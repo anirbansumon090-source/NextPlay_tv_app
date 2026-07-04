@@ -148,13 +148,15 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _handleAuthResponse(
-      Map<String, dynamic> res, String fallbackEmail) async {
-    final token = res['token'] as String? ?? 'demo-token';
-    final profile = UserProfileModel(
-      email: res['email'] as String? ?? fallbackEmail,
-      plan: res['plan'] as String? ?? 'Premium',
-    );
+ Future<void> _handleAuthResponse(
+    Map<String, dynamic> res, String fallbackEmail) async {
+  final token = res['token'] as String? ?? 'demo-token';
+  
+  final profile = UserProfileModel(
+    email: res['email'] as String? ?? fallbackEmail,
+    plan: res['plan'] as String? ?? 'Premium',
+    token: token, // Add this line to satisfy the 'required' parameter
+  );
     await secureStorage.saveAuthToken(token);
     await secureStorage.saveUserProfile(profile);
     userProfile = profile;

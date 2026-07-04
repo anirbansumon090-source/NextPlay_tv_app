@@ -102,15 +102,17 @@ class SubscriptionPlanModel {
 }
 
 class UserProfileModel {
-  const UserProfileModel({required this.email, required this.plan});
+  const UserProfileModel({required this.email,required this.token, required this.plan});
   final String email;
   final String plan;
+  final String token;
 
-  Map<String, dynamic> toJson() => {'email': email, 'plan': plan};
+  Map<String, dynamic> toJson() => {'email': email,'token':token, 'plan': plan};
 
   factory UserProfileModel.fromJson(Map<String, dynamic> json) =>
       UserProfileModel(
         email: json['email'] as String? ?? '',
+    		token: json['token'] as String? ?? '',
         plan:  json['plan'] as String? ?? 'Free',
       );
 }
