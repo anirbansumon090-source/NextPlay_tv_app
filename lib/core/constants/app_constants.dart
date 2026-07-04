@@ -7,7 +7,7 @@ class AppConstants {
   static const String appTagline  = 'Smart TV Streaming';
 
   // API
-  static const String defaultApiBaseUrl = 'http:/172.16.17.16/app';
+  static const String defaultApiBaseUrl = 'http://172.16.17.16/app';
 
   // Security
   static const String apiKeyId       = 'R54P9WJA3K';
