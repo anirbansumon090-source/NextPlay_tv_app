@@ -110,7 +110,7 @@ jobs:
       - name: Generate Android TV banner icons
         run: |
           set -euo pipefail
-          SRC="app_assets/ic_launcher_baner.png"
+          SRC="app_assets/ic_banner_launcher.png"
 
           if [ ! -f "$SRC" ]; then
             echo "❌ Banner সোর্স ইমেজ পাওয়া যায়নি: $SRC" >&2
@@ -190,8 +190,8 @@ jobs:
       - name: Push APK to GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "build/app/outputs/flutter-apk/nextplay-tv-v${{ github.event.inputs.app_version }}-build${{ github.run_number }}-*.apk"
+          artifacts: "build/app/outputs/flutter-apk/oTtking-v${{ github.event.inputs.app_version }}-build${{ github.run_number }}-*.apk"
           tag: "v${{ github.event.inputs.app_version }}.${{ github.run_number }}"
-          name: "NextPlay Tv App Release v${{ github.event.inputs.app_version }} (build ${{ github.run_number }})"
+          name: "oTtking App Release v${{ github.event.inputs.app_version }} (build ${{ github.run_number }})"
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
