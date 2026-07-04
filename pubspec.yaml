@@ -1,0 +1,35 @@
+name: ottking_nextplay
+description: Professional Smart TV Live Streaming App — TV-only landscape UI.
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.1
+  shared_preferences: ^2.3.2
+  flutter_secure_storage: ^9.2.2
+  http: ^1.2.2
+  crypto: ^3.0.3
+  encrypt: ^5.0.3
+  video_player: ^2.9.2
+  cached_network_image: ^3.3.1
+  flutter_cache_manager: ^3.4.1
+  device_info_plus: ^10.1.2
+  wakelock_plus: ^1.5.2
+  dio: ^5.4.0                    # ফাইল ডাউনলোডের জন্য (progress callback সহ)
+  path_provider: ^2.1.1          # APK সেভ করার ফোল্ডার পেতে
+  open_filex: ^4.4.0              # ডাউনলোড হওয়া APK ইনস্টলার ওপেন করার জন্য
+  package_info_plus: ^9.0.1       # কারেন্ট অ্যাপ ভার্সন পড়ার জন্য
+  permission_handler: ^11.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true

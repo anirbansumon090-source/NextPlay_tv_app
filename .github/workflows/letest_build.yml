@@ -1,0 +1,197 @@
+name: Flutter Android CI build - app version
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_version:
+        description: "App version (versionName), যেমন: 1.0.5"
+        required: true
+        default: "1.0.0"
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    env:
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
+      HMAC_SECRET_KEY: ${{ secrets.HMAC_SECRET_KEY }}
+      ENCRYPTION_KEY: ${{ secrets.HMAC_SECRET_KEY }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      KEY_DN: "CN=oTtking, OU=Dev, O=oTtking, L=Dhaka, S=Dhaka, C=BD"
+      APP_VERSION: ${{ github.event.inputs.app_version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Validate version input
+        run: |
+          set -euo pipefail
+          if [[ ! "$APP_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ ভুল ভার্সন ফরম্যাট: '$APP_VERSION'। সঠিক ফরম্যাট: x.y.z" >&2
+            exit 1
+          fi
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with: { distribution: 'temurin', java-version: '17' }
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with: { channel: 'stable', cache: true }
+
+      - name: Update pubspec.yaml version
+        run: |
+          NEW_VERSION="${APP_VERSION}+${{ github.run_number }}"
+          sed -i "s/^version:.*/version: ${NEW_VERSION}/" pubspec.yaml
+
+      - name: Setup Static Signing Key
+        run: |
+          set -euo pipefail
+          mkdir -p signing
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin "${GITHUB_REF_NAME}"
+          git reset --hard "origin/${GITHUB_REF_NAME}"
+
+          # ভার্সন আপডেট আবার অ্যাপ্লাই করা (reset এর কারণে হারিয়ে গেলে)
+          sed -i "s/^version:.*/version: ${APP_VERSION}+${{ github.run_number }}/" pubspec.yaml
+
+          if [ ! -f signing/key.jks ]; then
+            keytool -genkeypair -v -keystore signing/key.jks \
+              -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" \
+              -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "$KEY_DN"
+            git add signing/key.jks
+            git commit -m "chore: save signing key"
+            git push origin HEAD:"${GITHUB_REF_NAME}"
+          fi
+
+      - name: Create key.properties
+        run: |
+          cat > android/key.properties << EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=../signing/key.jks
+          EOF
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate and Verify launcher icons
+        run: |
+          set -euo pipefail
+          # আইকন জেনারেট করা (mipmap-* এ শুধু ic_launcher.png বানায়;
+          # adaptive_icon_background/foreground সেট থাকায় adaptive icon-ও তৈরি হয়,
+          # যা Android 8+ এ নিজে থেকেই round শেপে রেন্ডার হয়)
+          dart run flutter_launcher_icons
+
+          echo "Checking if launcher icons exist..."
+          FOLDERS=("mipmap-mdpi" "mipmap-hdpi" "mipmap-xhdpi" "mipmap-xxhdpi" "mipmap-xxxhdpi")
+
+          for folder in "${FOLDERS[@]}"; do
+            if [ -f "android/app/src/main/res/$folder/ic_launcher.png" ]; then
+              echo "✅ Found: $folder/ic_launcher.png"
+            else
+              echo "❌ Missing: $folder/ic_launcher.png"
+              exit 1
+            fi
+          done
+
+      - name: Generate Android TV banner icons
+        run: |
+          set -euo pipefail
+          SRC="app_assets/ic_launcher_baner.png"
+
+          if [ ! -f "$SRC" ]; then
+            echo "❌ Banner সোর্স ইমেজ পাওয়া যায়নি: $SRC" >&2
+            exit 1
+          fi
+
+          sudo apt-get update -y -qq
+          sudo apt-get install -y -qq imagemagick
+
+          # Android TV banner এর অফিসিয়াল সাইজ (xhdpi = 320x180 বেস)।
+          # mipmap-* ফোল্ডারে বসাচ্ছি কারণ AndroidManifest.xml ইতিমধ্যে
+          # android:banner="@mipmap/ic_banner_launcher" রেফারেন্স ব্যবহার করে
+          declare -A SIZES=(
+            [mdpi]="160x90"
+            [hdpi]="240x135"
+            [xhdpi]="320x180"
+            [xxhdpi]="480x270"
+            [xxxhdpi]="640x360"
+          )
+
+          echo "Generating Android TV banner icons..."
+          for density in "${!SIZES[@]}"; do
+            DIR="android/app/src/main/res/mipmap-${density}"
+            mkdir -p "$DIR"
+            convert "$SRC" -resize "${SIZES[$density]}!" "$DIR/ic_banner_launcher.png"
+            echo "✅ Generated: $DIR/ic_banner_launcher.png"
+          done
+
+          # AndroidManifest.xml এ android:banner অ্যাট্রিবিউট যোগ করা (না থাকলে)
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if ! grep -q 'android:banner=' "$MANIFEST"; then
+            sed -i '0,/<application/s##<application\n        android:banner="@mipmap/ic_banner_launcher"#' "$MANIFEST"
+            echo "✅ AndroidManifest.xml এ android:banner অ্যাট্রিবিউট যোগ করা হয়েছে"
+          else
+            echo "ℹ️ android:banner ইতিমধ্যে AndroidManifest.xml এ আছে (mipmap রেফারেন্স যাচাই করে নিন), স্কিপ করা হলো"
+          fi
+
+          echo "----------------------------------------"
+          echo "🔍 DIAGNOSTIC: তৈরি হওয়া banner ফাইলগুলো যাচাই করা হচ্ছে"
+          echo "----------------------------------------"
+          for density in "${!SIZES[@]}"; do
+            FILE="android/app/src/main/res/mipmap-${density}/ic_banner_launcher.png"
+            if [ -f "$FILE" ]; then
+              ls -la "$FILE"
+              file "$FILE"
+              SIZE_BYTES=$(stat -c%s "$FILE")
+              if [ "$SIZE_BYTES" -lt 100 ]; then
+                echo "❌ $FILE সন্দেহজনকভাবে ছোট ($SIZE_BYTES bytes) — সম্ভবত করাপ্টেড!" >&2
+                exit 1
+              fi
+            else
+              echo "❌ $FILE তৈরিই হয়নি!" >&2
+              exit 1
+            fi
+          done
+          echo "----------------------------------------"
+          echo "🔍 DIAGNOSTIC: AndroidManifest.xml এ banner লাইন"
+          echo "----------------------------------------"
+          grep -n "android:banner" "$MANIFEST" || echo "কোনো android:banner লাইন পাওয়া যায়নি!"
+
+      - name: Build APK
+        run: |
+          flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/app/outputs/symbols \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=HMAC_SECRET_KEY="$HMAC_SECRET_KEY" \
+            --dart-define=ENCRYPTION_KEY="$ENCRYPTION_KEY"
+
+      - name: Rename APK files
+        run: |
+          # সব APK ফাইল রিনেম করা যাতে আর্কিটেকচার নাম অক্ষুন্ন থাকে
+          for file in build/app/outputs/flutter-apk/*.apk; do
+            filename=$(basename "$file")
+            newname="oTtking-v${APP_VERSION}-build${{ github.run_number }}-${filename}"
+            mv "$file" "build/app/outputs/flutter-apk/$newname"
+          done
+
+      - name: Push APK to GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "build/app/outputs/flutter-apk/nextplay-tv-v${{ github.event.inputs.app_version }}-build${{ github.run_number }}-*.apk"
+          tag: "v${{ github.event.inputs.app_version }}.${{ github.run_number }}"
+          name: "NextPlay Tv App Release v${{ github.event.inputs.app_version }} (build ${{ github.run_number }})"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          allowUpdates: true
