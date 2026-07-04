@@ -22,7 +22,7 @@ class _SecurePlayerHttpOverrides extends HttpOverrides {
     final client = super.createHttpClient(context);
     client.findProxy = (uri) => "DIRECT";
     client.badCertificateCallback =
-        (X509Certificate cert, String host, int port) => false;
+        (X509Certificate cert, String host, int port) => true;
     // dead host হলে socket level এ দ্রুত fail করার জন্য — না হলে OS
     // default timeout (অনেক বেশি) ধরে অপেক্ষা করতে হতো।
     client.connectionTimeout = const Duration(seconds: 4);

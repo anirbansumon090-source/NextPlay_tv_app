@@ -30,7 +30,7 @@ class SecureApiClient {
 
     _httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) {
       
-      return false; 
+      return true; 
     };
   }
 
