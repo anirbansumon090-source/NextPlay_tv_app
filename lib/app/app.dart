@@ -19,7 +19,7 @@ class OttKingApp extends StatelessWidget {
         context.select<AppState, ThemeMode>((s) => s.themeMode);
 
     return MaterialApp(
-      title: 'NEXTPLAY',
+      title: 'Next Play',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       darkTheme: AppTheme.darkTheme,

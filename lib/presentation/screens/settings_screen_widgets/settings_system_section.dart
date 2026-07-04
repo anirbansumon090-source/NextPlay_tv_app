@@ -140,7 +140,7 @@ class _DeveloperDialog extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Anirban Sumon',
+            'Anirban Sumon \n Im_Rasel',
             style: TextStyle(
               color: AppTheme.primary,
               fontSize: 18,
@@ -190,7 +190,7 @@ class _AppInfoDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'NextPlay TV App',
+            'Next Play TV App',
             style: TextStyle(
               color: Colors.white,
               fontSize: 18,

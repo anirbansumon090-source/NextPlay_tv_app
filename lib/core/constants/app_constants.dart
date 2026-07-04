@@ -3,7 +3,7 @@
 class AppConstants {
   const AppConstants._();
 
-  static const String appName     = 'NEXTPLAY LIVE';
+  static const String appName     = 'Next Play';
   static const String appTagline  = 'Smart TV Streaming';
 
   // API
