@@ -152,7 +152,7 @@ class _SettingsNavSidebarState extends State<SettingsNavSidebar> {
             Padding(
               padding: const EdgeInsets.all(20),
               child: Text(
-                'v1.0.1  |  NEXTPLAY Smart TV',
+                'v1.0.7  |  Smart TV',
                 style: TextStyle(
                     color: Colors.white.withOpacity(0.2), fontSize: 12),
               ),
