@@ -1,4 +1,4 @@
-name: Flutter Android CI build - app version
+name: Flutter Android CI build - app version 2
 
 on:
   workflow_dispatch:
@@ -62,7 +62,6 @@ jobs:
           git fetch origin "${GITHUB_REF_NAME}"
           git reset --hard "origin/${GITHUB_REF_NAME}"
 
-          # ভার্সন আপডেট আবার অ্যাপ্লাই করা (reset এর কারণে হারিয়ে গেলে)
           sed -i "s/^version:.*/version: ${APP_VERSION}+${{ github.run_number }}/" pubspec.yaml
 
           if [ ! -f signing/key.jks ]; then
@@ -84,17 +83,23 @@ jobs:
           storeFile=../signing/key.jks
           EOF
 
-      - name: Ensure Compatible Gradle 9.5 Wrapper
+      - name: Force Compatible Gradle 8.13 Wrapper & Clear Cache
         run: |
           cd android
+          # সিস্টেমের পুরনো বা সমস্যা তৈরি করা গ্লোবাল গ্রেডল ক্যাশ ডিলিট করা
+          rm -rf ~/.gradle/wrapper/dists/*
+          rm -rf .gradle/
+          
+          # সঠিক Gradle 8.13 র‍্যাপার প্রপার্টিজ ফাইল তৈরি করা
           mkdir -p gradle/wrapper
           cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-9.5-bin.zip
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip
           EOF
+          
           chmod +x gradlew
 
       - name: Install dependencies
@@ -154,8 +159,13 @@ jobs:
             echo "ℹ️ android:banner ইতিমধ্যে AndroidManifest.xml এ আছে, স্কিপ করা হলো"
           fi
 
-      - name: Build APK
+      - name: Build APK (with Gradle Wrapper Guarantee)
         run: |
+          cd android
+          # নিশ্চিত করা হচ্ছে যে ফ্লুটার বিল্ড সরাসরি র্যাপার ব্যবহার করবে
+          ./gradlew clean
+          cd ..
+          
           flutter build apk --release --obfuscate --split-debug-info=build/app/outputs/symbols \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=HMAC_SECRET_KEY="$HMAC_SECRET_KEY" \
