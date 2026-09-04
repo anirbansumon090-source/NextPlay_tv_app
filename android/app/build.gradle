@@ -1,13 +1,13 @@
-// android/build.gradle ফাইলে এটি আপডেট করুন
 plugins {
     id "com.android.application"
     id "org.jetbrains.kotlin.android"
-    id "dev.flutter.flutter-gradle-plugin"}
+    id "dev.flutter.flutter-gradle-plugin"
+}
 
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file("android/app/key.properties")
 if (!keystorePropertiesFile.exists()) {
-    keystorePropertiesFile = rootProject.file("android/key.properties")
+    keystorePropertiesFile = rootProject.file("android/app/key.properties")
 }
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
@@ -33,9 +33,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
-        ndk {
-            abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
-        }
+        // ndk abiFilters ব্লকটি এখান থেকে রিমুভ করা হয়েছে যাতে `--split-per-abi` কাজ করতে পারে
     }
 
     signingConfigs {
