@@ -83,10 +83,14 @@ jobs:
           storeFile=../signing/key.jks
           EOF
 
-      - name: Force Compatible Gradle 9.5 Wrapper & Clear Cache
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Force Gradle 8.7 Wrapper (Fix AGP Incompatibility)
         run: |
           cd android
           rm -rf ~/.gradle/wrapper/dists/*
+          rm -rf ~/.gradle/caches/
           rm -rf .gradle/
           
           mkdir -p gradle/wrapper
@@ -95,13 +99,10 @@ jobs:
           distributionPath=wrapper/dists
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-9.5-bin.zip
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-bin.zip
           EOF
           
           chmod +x gradlew
-
-      - name: Install dependencies
-        run: flutter pub get
 
       - name: Generate and Verify launcher icons
         run: |
@@ -157,24 +158,25 @@ jobs:
             echo "ℹ️ android:banner ইতিমধ্যে AndroidManifest.xml এ আছে, স্কিপ করা হলো"
           fi
 
-      - name: Build APK with Gradle 9.5 Wrapper
+      - name: Build APK
         run: |
-          flutter build apk --release --obfuscate --split-debug-info=build/app/outputs/symbols \
+          flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/app/outputs/symbols \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=HMAC_SECRET_KEY="$HMAC_SECRET_KEY" \
-            --dart-define=ENCRYPTION_KEY="$ENCRYPTION_KEY" \
-            --android-skip-build-dependency-validation
+            --dart-define=ENCRYPTION_KEY="$ENCRYPTION_KEY"
 
-      - name: Rename APK
+      - name: Rename APK files
         run: |
-          set -euo pipefail
-          mv build/app/outputs/flutter-apk/app-release.apk \
-             "build/app/outputs/flutter-apk/oTtking-v${APP_VERSION}-build${{ github.run_number }}.apk"
+          for file in build/app/outputs/flutter-apk/*.apk; do
+            filename=$(basename "$file")
+            newname="oTtking-v${APP_VERSION}-build${{ github.run_number }}-${filename}"
+            mv "$file" "build/app/outputs/flutter-apk/$newname"
+          done
 
       - name: Push APK to GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "build/app/outputs/flutter-apk/oTtking-v${{ github.event.inputs.app_version }}-build${{ github.run_number }}.apk"
+          artifacts: "build/app/outputs/flutter-apk/oTtking-v${{ github.event.inputs.app_version }}-build${{ github.run_number }}-*.apk"
           tag: "v${{ github.event.inputs.app_version }}.${{ github.run_number }}"
           name: "oTtking App Release v${{ github.event.inputs.app_version }} (build ${{ github.run_number }})"
           token: ${{ secrets.GITHUB_TOKEN }}
