@@ -84,15 +84,25 @@ jobs:
           storeFile=../signing/key.jks
           EOF
 
+      - name: Ensure Compatible Gradle 8.13 Wrapper
+        run: |
+          cd android
+          mkdir -p gradle/wrapper
+          cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip
+          EOF
+          chmod +x gradlew
+
       - name: Install dependencies
         run: flutter pub get
 
       - name: Generate and Verify launcher icons
         run: |
           set -euo pipefail
-          # আইকন জেনারেট করা (mipmap-* এ শুধু ic_launcher.png বানায়;
-          # adaptive_icon_background/foreground সেট থাকায় adaptive icon-ও তৈরি হয়,
-          # যা Android 8+ এ নিজে থেকেই round শেপে রেন্ডার হয়)
           dart run flutter_launcher_icons
 
           echo "Checking if launcher icons exist..."
@@ -120,9 +130,6 @@ jobs:
           sudo apt-get update -y -qq
           sudo apt-get install -y -qq imagemagick
 
-          # Android TV banner এর অফিসিয়াল সাইজ (xhdpi = 320x180 বেস)।
-          # mipmap-* ফোল্ডারে বসাচ্ছি কারণ AndroidManifest.xml ইতিমধ্যে
-          # android:banner="@mipmap/ic_banner_launcher" রেফারেন্স ব্যবহার করে
           declare -A SIZES=(
             [mdpi]="160x90"
             [hdpi]="240x135"
@@ -139,37 +146,13 @@ jobs:
             echo "✅ Generated: $DIR/ic_banner_launcher.png"
           done
 
-          # AndroidManifest.xml এ android:banner অ্যাট্রিবিউট যোগ করা (না থাকলে)
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if ! grep -q 'android:banner=' "$MANIFEST"; then
             sed -i '0,/<application/s##<application\n        android:banner="@mipmap/ic_banner_launcher"#' "$MANIFEST"
             echo "✅ AndroidManifest.xml এ android:banner অ্যাট্রিবিউট যোগ করা হয়েছে"
           else
-            echo "ℹ️ android:banner ইতিমধ্যে AndroidManifest.xml এ আছে (mipmap রেফারেন্স যাচাই করে নিন), স্কিপ করা হলো"
+            echo "ℹ️ android:banner ইতিমধ্যে AndroidManifest.xml এ আছে, স্কিপ করা হলো"
           fi
-
-          echo "----------------------------------------"
-          echo "🔍 DIAGNOSTIC: তৈরি হওয়া banner ফাইলগুলো যাচাই করা হচ্ছে"
-          echo "----------------------------------------"
-          for density in "${!SIZES[@]}"; do
-            FILE="android/app/src/main/res/mipmap-${density}/ic_banner_launcher.png"
-            if [ -f "$FILE" ]; then
-              ls -la "$FILE"
-              file "$FILE"
-              SIZE_BYTES=$(stat -c%s "$FILE")
-              if [ "$SIZE_BYTES" -lt 100 ]; then
-                echo "❌ $FILE সন্দেহজনকভাবে ছোট ($SIZE_BYTES bytes) — সম্ভবত করাপ্টেড!" >&2
-                exit 1
-              fi
-            else
-              echo "❌ $FILE তৈরিই হয়নি!" >&2
-              exit 1
-            fi
-          done
-          echo "----------------------------------------"
-          echo "🔍 DIAGNOSTIC: AndroidManifest.xml এ banner লাইন"
-          echo "----------------------------------------"
-          grep -n "android:banner" "$MANIFEST" || echo "কোনো android:banner লাইন পাওয়া যায়নি!"
 
       - name: Build APK
         run: |
