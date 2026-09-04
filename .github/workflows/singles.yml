@@ -84,7 +84,7 @@ jobs:
           storeFile=../signing/key.jks
           EOF
 
-      - name: Ensure Compatible Gradle 8.13 Wrapper
+      - name: Ensure Compatible Gradle 9.5 Wrapper
         run: |
           cd android
           mkdir -p gradle/wrapper
@@ -93,7 +93,7 @@ jobs:
           distributionPath=wrapper/dists
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip
+          distributionUrl=https\://services.gradle.org/distributions/gradle-9.5-bin.zip
           EOF
           chmod +x gradlew
 
