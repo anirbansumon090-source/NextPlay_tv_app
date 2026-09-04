@@ -34,5 +34,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
  	assets:
-    - assets/image/
-    - assets/image/splash_banner.jpg
+    	- assets/image/
+    	- assets/image/splash_banner.jpg
