@@ -1,6 +1,4 @@
 // lib/presentation/screens/splash_screen.dart
-// TV-only landscape splash. Boots to player if enabled & has channels.
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -26,7 +24,6 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // Force landscape on every screen
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
@@ -53,14 +50,13 @@ class _SplashScreenState extends State<SplashScreen>
     try {
       await appState.bootstrap();
 
-    
       if (appState.errorMessage.isNotEmpty || appState.channels.isEmpty) {
         if (mounted) {
           setState(() {
             _isLoading = false;
             _errorMessage = appState.errorMessage.isNotEmpty
                 ? 'Network or server issue. Please try again.'
-                : 'Channel failed to load. Please check your internet connection and try again.';
+                : 'Channel failed to load. Please check your internet connection.';
           });
         }
         return;
@@ -87,12 +83,9 @@ class _SplashScreenState extends State<SplashScreen>
     final appState = context.read<AppState>();
 
     if (appState.shouldBootToPlayer() && appState.channels.isNotEmpty) {
-      // Boot directly to last-played channel (already restored in loadCatalog)
-      Navigator.pushNamedAndRemoveUntil(
-          context, '/player', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(context, '/player', (route) => false);
     } else {
-      Navigator.pushNamedAndRemoveUntil(
-          context, '/home', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
     }
   }
 
@@ -108,176 +101,79 @@ class _SplashScreenState extends State<SplashScreen>
 
     return Scaffold(
       backgroundColor: AppTheme.surface,
-      body: SafeArea(
-        child: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: const Alignment(0, -0.3),
-              radius: 1.2,
-              colors: [
-                AppTheme.primary.withOpacity(0.08),
-                AppTheme.surface,
-              ],
-            ),
-          ),
-          child: Row(
-            children: [
-              // Left decorative bar
-              Container(
-                width: 6,
-                height: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      AppTheme.primary.withOpacity(0.0),
-                      AppTheme.primary,
-                      AppTheme.primary.withOpacity(0.0),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // ব্যানার ইমেজ — কোনো অংশ crop না হয়ে পুরো ছবিটাই স্কেল হয়ে স্ক্রিনে ফিট হবে
+          Image.asset(
+            'assets/image/splash_banner.jpg',
+            width: size.width,
+            height: size.height,
+            fit: BoxFit.fill,
+            errorBuilder: (context, error, stackTrace) {
+              // asset load fail করলে console এ exact কারণ প্রিন্ট হবে,
+              // আর ডার্ক ব্যাকগ্রাউন্ডেও স্পষ্ট বোঝা যাবে যে ইমেজ লোড হয়নি
+              debugPrint('Splash banner load failed: $error');
+              return Container(
+                color: AppTheme.surface,
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.image_not_supported_outlined,
+                          color: Colors.white54, size: 56),
+                      SizedBox(height: 8),
+                      Text('Banner not found',
+                          style: TextStyle(color: Colors.white38, fontSize: 12)),
                     ],
                   ),
                 ),
-              ),
-              // Center content
-              Expanded(
-                child: Center(
-                  child: SingleChildScrollView(
-                    physics: const ClampingScrollPhysics(),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      child: AnimatedBuilder(
-                        animation: _pulse,
-                        builder: (context, child) => Transform.scale(
-                          scale: _isLoading ? 0.96 + _pulse.value * 0.04 : 1.0,
-                          child: child,
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Logo ring
-                            Container(
-                              width: 110,
-                              height: 110,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppTheme.primary.withOpacity(0.08),
-                                border: Border.all(
-                                  color: _isLoading
-                                      ? AppTheme.primary
-                                      : Colors.redAccent,
-                                  width: 2.5,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: (_isLoading
-                                            ? AppTheme.primary
-                                            : Colors.redAccent)
-                                        .withOpacity(0.3),
-                                    blurRadius: 30,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                _isLoading
-                                    ? Icons.live_tv_rounded
-                                    : Icons.wifi_off_rounded,
-                                size: 48,
-                                color: _isLoading ? AppTheme.primary : Colors.redAccent,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-      
-                            // App name
-                            Text(
-                              AppConstants.appName,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 42,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 4,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-      
-                            const SizedBox(height: 6),
-                            Text(
-                              AppConstants.appTagline,
-                              style: TextStyle(
-                                color: AppTheme.primary.withOpacity(0.8),
-                                fontSize: 14,
-                                letterSpacing: 1.5,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-      
-                            const SizedBox(height: 36),
-      
-                            if (_isLoading) ...[
-                              SizedBox(
-                                width: 32,
-                                height: 32,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 3,
-                                  valueColor: AlwaysStoppedAnimation(AppTheme.primary),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Loading channels...',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.5),
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ] else if (_errorMessage != null) ...[
-                              ConstrainedBox(
-                                constraints: BoxConstraints(maxWidth: size.width * 0.6),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  child: Text(
-                                    _errorMessage!,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Colors.white60,
-                                      fontSize: 15,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              ElevatedButton.icon(
-                                autofocus: true, // রিমোটের ফোকাস অটোমেটিক বাটনে চলে আসবে
-                                onPressed: _boot,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.primary,
-                                  foregroundColor: Colors.black, // টেক্সট কালার আরও ক্লিয়ার করা হলো
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 36, vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8)),
-                                  textStyle: const TextStyle(
-                                      fontSize: 16, fontWeight: FontWeight.bold),
-                                ),
-                                icon: const Icon(Icons.refresh_rounded, size: 20),
-                                label: const Text('Try Again'),
-                              ),
-                            ],
-                          ],
+              );
+            },
+          ),
+
+          // ব্যানারের উপর হালকা অন্ধকার overlay, যাতে প্রগ্রেস/টেক্সট স্পষ্ট দেখা যায়
+          Container(color: Colors.black.withOpacity(0.25)),
+
+          // লোডিং বা এরর মেসেজ — স্ক্রিনের নিচের দিকে, বটাম সেন্টারে
+          SafeArea(
+            child: Align(
+              alignment: const Alignment(0, 0.9),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_isLoading) ...[
+                      const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Loading...',
+                          style: TextStyle(color: Colors.white60)),
+                    ] else if (_errorMessage != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              color: Colors.redAccent, fontSize: 16),
                         ),
                       ),
-                    ),
-                  ),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        autofocus: true,
+                        onPressed: _boot,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Try Again'),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
