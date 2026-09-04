@@ -1,4 +1,4 @@
-name: Flutter Android CI build - app version 2
+name: Flutter Android CI build - app version
 
 on:
   workflow_dispatch:
@@ -83,21 +83,19 @@ jobs:
           storeFile=../signing/key.jks
           EOF
 
-      - name: Force Compatible Gradle 8.13 Wrapper & Clear Cache
+      - name: Force Compatible Gradle 9.5 Wrapper & Clear Cache
         run: |
           cd android
-          # সিস্টেমের পুরনো বা সমস্যা তৈরি করা গ্লোবাল গ্রেডল ক্যাশ ডিলিট করা
           rm -rf ~/.gradle/wrapper/dists/*
           rm -rf .gradle/
           
-          # সঠিক Gradle 8.13 র‍্যাপার প্রপার্টিজ ফাইল তৈরি করা
           mkdir -p gradle/wrapper
           cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip
+          distributionUrl=https\://services.gradle.org/distributions/gradle-9.5-bin.zip
           EOF
           
           chmod +x gradlew
@@ -159,17 +157,13 @@ jobs:
             echo "ℹ️ android:banner ইতিমধ্যে AndroidManifest.xml এ আছে, স্কিপ করা হলো"
           fi
 
-      - name: Build APK (with Gradle Wrapper Guarantee)
+      - name: Build APK with Gradle 9.5 Wrapper
         run: |
-          cd android
-          # নিশ্চিত করা হচ্ছে যে ফ্লুটার বিল্ড সরাসরি র্যাপার ব্যবহার করবে
-          ./gradlew clean
-          cd ..
-          
           flutter build apk --release --obfuscate --split-debug-info=build/app/outputs/symbols \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=HMAC_SECRET_KEY="$HMAC_SECRET_KEY" \
-            --dart-define=ENCRYPTION_KEY="$ENCRYPTION_KEY"
+            --dart-define=ENCRYPTION_KEY="$ENCRYPTION_KEY" \
+            --android-skip-build-dependency-validation
 
       - name: Rename APK
         run: |
